@@ -73,7 +73,7 @@ install_docker() {
     fi
 }
 
-# Install mnibuilder
+# Install mnibuilder (from private repo, requires gh CLI)
 install_mnibuilder() {
     if command -v mnibuilder >/dev/null 2>&1; then
         print_status "mnibuilder is already installed"
@@ -94,18 +94,41 @@ install_mnibuilder() {
         # Download if not exists
         if [ ! -f "$MNIBUILDER_TAR" ]; then
             print_status "Downloading mnibuilder ${MNIBUILDER_VERSION}..."
-            wget -q --show-progress "https://github.com/mNi-Cloud/mnibuilder/releases/download/${MNIBUILDER_VERSION}/mnibuilder_Linux_x86_64.tar.gz" -O "$MNIBUILDER_TAR" || {
-                print_error "Failed to download mnibuilder ${MNIBUILDER_VERSION}"
-                print_warning "Please check if version ${MNIBUILDER_VERSION} exists at https://github.com/mNi-Cloud/mnibuilder/releases"
+            
+            # mnibuilder is in a private repo, need gh CLI
+            if command -v gh >/dev/null 2>&1; then
+                # Check gh auth status
+                if ! gh auth status &>/dev/null; then
+                    print_warning "GitHub CLI not authenticated. Please login first:"
+                    gh auth login
+                fi
+                
+                # Download using gh CLI
+                gh release download "${MNIBUILDER_VERSION}" \
+                    --repo mNi-Cloud/mnibuilder \
+                    --pattern "mnibuilder_Linux_x86_64.tar.gz" \
+                    --dir "${MNI_ROOT}" || {
+                    print_error "Failed to download mnibuilder ${MNIBUILDER_VERSION}"
+                    print_warning "Make sure you have access to the mNi-Cloud/mnibuilder repository"
+                    return 1
+                }
+            else
+                print_error "GitHub CLI (gh) is required to download mnibuilder from private repo"
+                print_warning "Please install gh first or run this script later after gh is installed"
                 return 1
-            }
+            fi
         fi
         
-        print_status "Installing mnibuilder..."
-        tar -xzf "$MNIBUILDER_TAR" -C /tmp
-        mv /tmp/mnibuilder "$INSTALL_DIR/"
-        chmod +x "$INSTALL_DIR/mnibuilder"
-        print_status "mnibuilder ${MNIBUILDER_VERSION} installed successfully"
+        if [ -f "$MNIBUILDER_TAR" ]; then
+            print_status "Installing mnibuilder..."
+            tar -xzf "$MNIBUILDER_TAR" -C /tmp
+            mv /tmp/mnibuilder "$INSTALL_DIR/"
+            chmod +x "$INSTALL_DIR/mnibuilder"
+            print_status "mnibuilder ${MNIBUILDER_VERSION} installed successfully"
+        else
+            print_error "mnibuilder tar.gz not found after download"
+            return 1
+        fi
     fi
 }
 
@@ -233,15 +256,16 @@ main() {
     setup_path
     
     # Install tools in order
+    # Install gh first (needed for private repos)
+    install_gh
     install_go
     install_docker
-    install_mnibuilder
+    install_mnibuilder  # Requires gh for private repo access
     install_aqua
     install_direnv
     install_tmux
     install_yq
     install_tilt
-    install_gh
     
     echo ""
     print_status "Installation complete!"

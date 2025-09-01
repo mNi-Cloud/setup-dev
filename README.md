@@ -10,12 +10,13 @@ Run the complete setup:
 ```
 
 This will:
-1. Install all required tools
-2. Clone/update repositories  
-3. Configure environment
-4. Start Docker registry
-5. Prepare dependencies
-6. Optionally start Tilt
+1. Install all required tools (including GitHub CLI)
+2. Download mnibuilder from private repo (prompts for GitHub login if needed)
+3. Clone/update repositories  
+4. Configure environment
+5. Start Docker registry
+6. Prepare dependencies
+7. Optionally start Tilt
 
 ## Required Tools
 
