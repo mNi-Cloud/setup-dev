@@ -89,46 +89,37 @@ install_mnibuilder() {
         # Default version if not specified
         MNIBUILDER_VERSION=${MNIBUILDER_VERSION:-"v0.0.3"}
         
-        MNIBUILDER_TAR="${MNI_ROOT}/mnibuilder_Linux_x86_64.tar.gz"
+        print_status "Installing mnibuilder ${MNIBUILDER_VERSION}..."
         
-        # Download if not exists
-        if [ ! -f "$MNIBUILDER_TAR" ]; then
-            print_status "Downloading mnibuilder ${MNIBUILDER_VERSION}..."
-            
-            # mnibuilder is in a private repo, need gh CLI
-            if command -v gh >/dev/null 2>&1; then
-                # Check gh auth status
-                if ! gh auth status &>/dev/null; then
-                    print_warning "GitHub CLI not authenticated. Please login first:"
-                    gh auth login
-                fi
-                
-                cd "${MNI_ROOT}"
-                gh release download "${MNIBUILDER_VERSION}" \
-                    --repo mNi-Cloud/mnibuilder \
-                    --pattern "mnibuilder_Linux_x86_64.tar.gz" \
-                    --clobber || {
-                    print_error "Failed to download mnibuilder ${MNIBUILDER_VERSION}"
-                    print_warning "Make sure you have access to the mNi-Cloud/mnibuilder repository"
-                    cd - > /dev/null
-                    return 1
-                }
-                cd - > /dev/null
-            else
-                print_error "GitHub CLI (gh) is required to download mnibuilder from private repo"
-                print_warning "Please install gh first or run this script later after gh is installed"
-                return 1
+        # mnibuilder is in a private repo, need gh CLI
+        if command -v gh >/dev/null 2>&1; then
+            # Check gh auth status
+            if ! gh auth status &>/dev/null; then
+                print_warning "GitHub CLI not authenticated. Please login first:"
+                gh auth login
             fi
-        fi
-        
-        if [ -f "$MNIBUILDER_TAR" ]; then
-            print_status "Installing mnibuilder..."
-            tar -xzf "$MNIBUILDER_TAR" -C /tmp
+            
+            # Download to /tmp like other tools
+            gh release download "${MNIBUILDER_VERSION}" \
+                --repo mNi-Cloud/mnibuilder \
+                --pattern "mnibuilder_Linux_x86_64.tar.gz" \
+                --dir /tmp \
+                --clobber || {
+                print_error "Failed to download mnibuilder ${MNIBUILDER_VERSION}"
+                print_warning "Make sure you have access to the mNi-Cloud/mnibuilder repository"
+                return 1
+            }
+            
+            # Extract and install
+            tar -xzf /tmp/mnibuilder_Linux_x86_64.tar.gz -C /tmp
             mv /tmp/mnibuilder "$INSTALL_DIR/"
             chmod +x "$INSTALL_DIR/mnibuilder"
+            rm /tmp/mnibuilder_Linux_x86_64.tar.gz  # Clean up
+            
             print_status "mnibuilder ${MNIBUILDER_VERSION} installed successfully"
         else
-            print_error "mnibuilder tar.gz not found after download"
+            print_error "GitHub CLI (gh) is required to download mnibuilder from private repo"
+            print_warning "Please install gh first or run this script later after gh is installed"
             return 1
         fi
     fi
