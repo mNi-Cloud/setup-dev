@@ -19,11 +19,55 @@ REGISTRY_IMAGE="registry:2"
 
 # Check if Docker is running
 check_docker() {
-    if ! docker info >/dev/null 2>&1; then
-        print_error "Docker is not running or you don't have permission"
-        print_warning "Please start Docker or add your user to docker group"
-        exit 1
+    # First check if docker command exists
+    if ! command -v docker >/dev/null 2>&1; then
+        print_error "Docker is not installed"
+        print_warning "Please run './setup-tools.sh' first to install Docker"
+        return 1
     fi
+    
+    # Check if docker daemon is running
+    if ! docker info >/dev/null 2>&1; then
+        # Check if it's a permission issue or daemon not running
+        if ! groups | grep -q docker; then
+            # User is not in docker group - add them
+            print_warning "Adding user to docker group..."
+            sudo usermod -aG docker $USER
+            print_status "User added to docker group"
+            
+            # Apply group change in current session and re-run this script
+            print_status "Applying group changes and continuing..."
+            exec sg docker "$0" "$@"
+        fi
+        
+        # User is in docker group, so daemon is likely not running
+        print_warning "Docker daemon is not running"
+        print_status "Starting Docker daemon..."
+        
+        # Try to start Docker daemon
+        if command -v systemctl >/dev/null 2>&1; then
+            sudo systemctl start docker
+            sudo systemctl enable docker
+            sleep 3
+        elif command -v service >/dev/null 2>&1; then
+            sudo service docker start
+            sleep 3
+        else
+            print_error "Cannot start Docker daemon - unknown init system"
+            return 1
+        fi
+        
+        # Check again
+        if docker info >/dev/null 2>&1; then
+            print_status "Docker daemon started successfully"
+        else
+            print_error "Failed to start Docker daemon"
+            return 1
+        fi
+    fi
+    
+    print_status "Docker is running and accessible"
+    return 0
 }
 
 # Check if registry is already running
@@ -161,7 +205,10 @@ show_usage() {
 main() {
     print_status "Setting up Docker registry for Tilt..."
     
-    check_docker
+    if ! check_docker; then
+        print_error "Docker setup failed"
+        exit 1
+    fi
     
     if ! check_existing_registry; then
         start_registry
