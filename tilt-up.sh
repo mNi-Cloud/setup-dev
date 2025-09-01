@@ -30,6 +30,35 @@ print_status() { echo -e "${GREEN}[INFO]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 
+# Check Docker permissions and restart with sg if needed
+check_docker_permissions() {
+    if ! docker info >/dev/null 2>&1; then
+        if ! groups | grep -q docker; then
+            # User is not in docker group - add them and restart
+            print_warning "Adding user to docker group..."
+            sudo usermod -aG docker $USER
+            print_status "User added to docker group"
+            print_status "Restarting script with docker permissions..."
+            exec sg docker "$0" "$@"
+        else
+            # User is in docker group but daemon might not be running
+            print_warning "Docker daemon may not be running"
+            print_status "Attempting to start Docker..."
+            if command -v systemctl >/dev/null 2>&1; then
+                sudo systemctl start docker
+                sudo systemctl enable docker
+            elif command -v service >/dev/null 2>&1; then
+                sudo service docker start
+            fi
+            sleep 2
+            if ! docker info >/dev/null 2>&1; then
+                print_error "Cannot access Docker daemon"
+                exit 1
+            fi
+        fi
+    fi
+}
+
 # Check prerequisites
 check_prerequisites() {
     local missing=()
@@ -117,6 +146,7 @@ start_tilt_component() {
 main() {
     print_status "Starting Tilt development environment..."
     
+    check_docker_permissions
     check_prerequisites
     check_registry
     
