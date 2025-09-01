@@ -31,6 +31,28 @@ fi
 # Create installation directory
 mkdir -p "$INSTALL_DIR"
 
+# Install build-essential (includes make, gcc, etc.)
+install_build_essential() {
+    if command -v make >/dev/null 2>&1; then
+        print_status "make is already installed"
+    else
+        print_status "Installing build-essential..."
+        if command -v apt-get >/dev/null 2>&1; then
+            sudo apt-get update && sudo apt-get install -y build-essential
+        elif command -v yum >/dev/null 2>&1; then
+            sudo yum groupinstall -y "Development Tools"
+        elif command -v dnf >/dev/null 2>&1; then
+            sudo dnf groupinstall -y "Development Tools"
+        elif command -v pacman >/dev/null 2>&1; then
+            sudo pacman -S --noconfirm base-devel
+        else
+            print_error "Cannot install build-essential - unknown package manager"
+            return 1
+        fi
+        print_status "build-essential installed successfully"
+    fi
+}
+
 # Install Go 1.24.2
 install_go() {
     if command -v go >/dev/null 2>&1 && go version | grep -q "1.24"; then
@@ -251,6 +273,7 @@ main() {
     # Install tools in order
     # Install gh first (needed for private repos)
     install_gh
+    install_build_essential  # Install make and build tools
     install_go
     install_docker
     install_mnibuilder  # Requires gh for private repo access
@@ -264,6 +287,7 @@ main() {
     print_status "Installation complete!"
     echo ""
     echo "=== Installed Tools ===" 
+    make --version 2>/dev/null | head -1 || print_error "make not found"
     go version 2>/dev/null || print_error "Go not found"
     docker --version 2>/dev/null || print_error "Docker not found"
     mnibuilder version 2>/dev/null || print_error "mnibuilder not found"

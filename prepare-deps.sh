@@ -35,6 +35,7 @@ check_prerequisites() {
     command -v go >/dev/null 2>&1 || missing+=("go")
     command -v yq >/dev/null 2>&1 || missing+=("yq")
     command -v mnibuilder >/dev/null 2>&1 || missing+=("mnibuilder")
+    command -v make >/dev/null 2>&1 || missing+=("make")
     
     if [ ${#missing[@]} -gt 0 ]; then
         print_error "Missing required tools: ${missing[*]}"
