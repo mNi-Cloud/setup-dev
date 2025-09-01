@@ -146,7 +146,16 @@ clone_or_update_repo() {
         cd - > /dev/null
     else
         print_status "Cloning $name..."
-        git clone "$repo" "$component_dir"
+        # Extract org/repo from URL (https://github.com/mNi-Cloud/dependency-controller.git -> mNi-Cloud/dependency-controller)
+        local gh_repo=$(echo "$repo" | sed -E 's|https://github.com/||; s|\.git$||')
+        
+        # Use gh CLI to clone (handles auth automatically)
+        if command -v gh >/dev/null 2>&1; then
+            gh repo clone "$gh_repo" "$component_dir"
+        else
+            # Fallback to git clone
+            git clone "$repo" "$component_dir"
+        fi
     fi
 }
 
@@ -154,26 +163,40 @@ clone_or_update_repo() {
 setup_github_auth() {
     print_status "Checking GitHub authentication..."
     
-    # Check if we can access private repos
-    if ! git ls-remote https://github.com/mNi-Cloud/dependency-controller.git &>/dev/null; then
-        print_warning "Cannot access private mNi-Cloud repositories"
-        echo ""
-        echo "Please configure GitHub access using one of these methods:"
-        echo "1. GitHub Personal Access Token (recommended):"
-        echo "   git config --global url.'https://YOUR_TOKEN@github.com/'.insteadOf 'https://github.com/'"
-        echo ""
-        echo "2. SSH Key:"
-        echo "   git config --global url.'git@github.com:'.insteadOf 'https://github.com/'"
-        echo ""
-        read -p "Have you configured GitHub access? (y/n): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            print_error "GitHub authentication required. Please configure and try again."
-            exit 1
-        fi
-    else
-        print_status "GitHub authentication OK"
+    # Check if gh CLI is installed
+    if ! command -v gh >/dev/null 2>&1; then
+        print_error "GitHub CLI (gh) is not installed"
+        print_warning "Please run './setup-tools.sh' first to install gh"
+        exit 1
     fi
+    
+    # Check if gh is authenticated
+    if ! gh auth status &>/dev/null; then
+        print_warning "GitHub CLI is not authenticated"
+        echo ""
+        echo "Please authenticate with GitHub:"
+        echo ""
+        gh auth login
+        
+        # Setup git to use gh CLI authentication
+        print_status "Setting up git to use GitHub CLI authentication..."
+        gh auth setup-git
+    else
+        print_status "GitHub CLI authentication OK"
+        
+        # Ensure git is configured to use gh auth
+        gh auth setup-git &>/dev/null || true
+    fi
+    
+    # Verify we can access private repos
+    print_status "Verifying access to private repositories..."
+    if ! gh repo view mNi-Cloud/dependency-controller &>/dev/null; then
+        print_error "Cannot access private mNi-Cloud repositories"
+        print_warning "Please ensure you have access to the mNi-Cloud organization"
+        exit 1
+    fi
+    
+    print_status "GitHub authentication configured successfully"
 }
 
 # Main function

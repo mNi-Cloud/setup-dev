@@ -181,6 +181,26 @@ install_tilt() {
     fi
 }
 
+# Install GitHub CLI
+install_gh() {
+    if command -v gh >/dev/null 2>&1; then
+        print_status "GitHub CLI is already installed"
+    else
+        print_status "Installing GitHub CLI..."
+        # Download latest release
+        GH_VERSION=$(curl -s https://api.github.com/repos/cli/cli/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+        if [ -z "$GH_VERSION" ]; then
+            GH_VERSION="2.45.0"  # Fallback version
+        fi
+        wget -q --show-progress "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.tar.gz" -O /tmp/gh.tar.gz
+        tar -xzf /tmp/gh.tar.gz -C /tmp
+        mv /tmp/gh_${GH_VERSION}_linux_amd64/bin/gh "$INSTALL_DIR/"
+        chmod +x "$INSTALL_DIR/gh"
+        rm -rf /tmp/gh.tar.gz /tmp/gh_${GH_VERSION}_linux_amd64
+        print_status "GitHub CLI installed successfully"
+    fi
+}
+
 # Add local bin to PATH
 setup_path() {
     if ! grep -q "$INSTALL_DIR" ~/.bashrc; then
@@ -205,6 +225,7 @@ main() {
     install_tmux
     install_yq
     install_tilt
+    install_gh
     
     echo ""
     print_status "Installation complete!"
@@ -218,6 +239,7 @@ main() {
     tmux -V 2>/dev/null || print_error "tmux not found"
     yq --version 2>/dev/null || print_error "yq not found"
     tilt version 2>/dev/null || print_error "Tilt not found"
+    gh --version 2>/dev/null || print_error "GitHub CLI not found"
     
     echo ""
     print_warning "IMPORTANT: Run 'source ~/.bashrc' to update your PATH"

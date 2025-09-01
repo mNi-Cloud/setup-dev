@@ -28,6 +28,7 @@ All tools are installed as binaries (no package manager dependencies):
 - **tmux** - Terminal multiplexer for managing Tilt sessions
 - **yq** - YAML processor
 - **Tilt** - Kubernetes development tool
+- **gh** - GitHub CLI for authentication and repository access
 
 ## Components
 
@@ -48,11 +49,11 @@ Installs all required development tools as binaries.
 ```
 
 ### clone-repos.sh
-Clones or updates all component repositories from GitHub.
+Clones or updates all component repositories from GitHub using GitHub CLI.
 ```bash
 ./clone-repos.sh
 ```
-Requires GitHub access to private repos (PAT or SSH key).
+Automatically uses `gh auth login` if not authenticated.
 
 ### setup-env.sh  
 Configures environment variables and installs aqua packages.
@@ -118,14 +119,19 @@ After running `tilt-up.sh`:
 ## Troubleshooting
 
 ### GitHub Access
-Configure GitHub access for private repos:
+The setup uses GitHub CLI for authentication. If not already authenticated:
 ```bash
-# Using Personal Access Token
-git config --global url."https://YOUR_TOKEN@github.com/".insteadOf "https://github.com/"
+# Login to GitHub (will be prompted during clone-repos.sh)
+gh auth login
 
-# Using SSH
-git config --global url."git@github.com:".insteadOf "https://github.com/"
+# Manual login if needed
+gh auth login --web
+
+# Check authentication status
+gh auth status
 ```
+
+GitHub CLI automatically handles authentication for git operations.
 
 ### Docker Registry
 If registry is not accessible:
