@@ -49,6 +49,7 @@ components:
 # Build tools configuration
 build_tools:
   go_version: "1.24.2"
+  mnibuilder_version: "v0.0.3"
   controller_tools_version: "v0.17.0"
   kustomize_version: "v5.5.0"
   golangci_lint_version: "v1.62.2"

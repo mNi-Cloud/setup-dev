@@ -73,23 +73,39 @@ install_docker() {
     fi
 }
 
-# Install mnibuilder from tar.gz
+# Install mnibuilder
 install_mnibuilder() {
     if command -v mnibuilder >/dev/null 2>&1; then
         print_status "mnibuilder is already installed"
     else
-        MNIBUILDER_TAR="${MNI_ROOT}/mnibuilder_Linux_x86_64.tar.gz"
-        if [ -f "$MNIBUILDER_TAR" ]; then
-            print_status "Installing mnibuilder from $MNIBUILDER_TAR..."
-            tar -xzf "$MNIBUILDER_TAR" -C /tmp
-            mv /tmp/mnibuilder "$INSTALL_DIR/"
-            chmod +x "$INSTALL_DIR/mnibuilder"
-            print_status "mnibuilder installed successfully"
-        else
-            print_error "mnibuilder tar.gz not found at $MNIBUILDER_TAR"
-            print_warning "Please download from: https://github.com/mNi-Cloud/mnibuilder/releases/latest"
-            return 1
+        # Get version from components.yaml if available
+        CONFIG_FILE="${SCRIPT_DIR}/components.yaml"
+        if [ -f "$CONFIG_FILE" ] && command -v yq >/dev/null 2>&1; then
+            MNIBUILDER_VERSION=$(yq eval '.build_tools.mnibuilder_version' "$CONFIG_FILE")
+        elif [ -f "$CONFIG_FILE" ] && command -v python3 >/dev/null 2>&1; then
+            MNIBUILDER_VERSION=$(python3 -c "import yaml; print(yaml.safe_load(open('$CONFIG_FILE'))['build_tools']['mnibuilder_version'])" 2>/dev/null)
         fi
+        
+        # Default version if not specified
+        MNIBUILDER_VERSION=${MNIBUILDER_VERSION:-"v0.0.3"}
+        
+        MNIBUILDER_TAR="${MNI_ROOT}/mnibuilder_Linux_x86_64.tar.gz"
+        
+        # Download if not exists
+        if [ ! -f "$MNIBUILDER_TAR" ]; then
+            print_status "Downloading mnibuilder ${MNIBUILDER_VERSION}..."
+            wget -q --show-progress "https://github.com/mNi-Cloud/mnibuilder/releases/download/${MNIBUILDER_VERSION}/mnibuilder_Linux_x86_64.tar.gz" -O "$MNIBUILDER_TAR" || {
+                print_error "Failed to download mnibuilder ${MNIBUILDER_VERSION}"
+                print_warning "Please check if version ${MNIBUILDER_VERSION} exists at https://github.com/mNi-Cloud/mnibuilder/releases"
+                return 1
+            }
+        fi
+        
+        print_status "Installing mnibuilder..."
+        tar -xzf "$MNIBUILDER_TAR" -C /tmp
+        mv /tmp/mnibuilder "$INSTALL_DIR/"
+        chmod +x "$INSTALL_DIR/mnibuilder"
+        print_status "mnibuilder ${MNIBUILDER_VERSION} installed successfully"
     fi
 }
 
