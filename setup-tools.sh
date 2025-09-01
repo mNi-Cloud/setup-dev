@@ -103,15 +103,17 @@ install_mnibuilder() {
                     gh auth login
                 fi
                 
-                # Download using gh CLI
+                cd "${MNI_ROOT}"
                 gh release download "${MNIBUILDER_VERSION}" \
                     --repo mNi-Cloud/mnibuilder \
                     --pattern "mnibuilder_Linux_x86_64.tar.gz" \
-                    --dir "${MNI_ROOT}" || {
+                    --clobber || {
                     print_error "Failed to download mnibuilder ${MNIBUILDER_VERSION}"
                     print_warning "Make sure you have access to the mNi-Cloud/mnibuilder repository"
+                    cd - > /dev/null
                     return 1
                 }
+                cd - > /dev/null
             else
                 print_error "GitHub CLI (gh) is required to download mnibuilder from private repo"
                 print_warning "Please install gh first or run this script later after gh is installed"
