@@ -1,0 +1,66 @@
+# mni-backend Components Configuration
+# Add new components here as they are developed
+
+components:
+  # Core controllers - always required
+  - name: dependency-controller
+    repo: https://github.com/mNi-Cloud/dependency-controller.git
+    type: controller
+    has_tiltfile: true
+    tilt_port: 10350
+    required: true
+    
+  - name: api-gateway
+    repo: https://github.com/mNi-Cloud/api-gateway.git
+    type: service
+    has_tiltfile: true
+    tilt_port: 10351
+    required: true
+    
+  - name: vpc-controller
+    repo: https://github.com/mNi-Cloud/vpc-controller.git
+    type: controller
+    has_tiltfile: true
+    tilt_port: 10352
+    required: true
+    
+  # CLI tool - no Tiltfile
+  - name: cli
+    repo: https://github.com/mNi-Cloud/cli.git
+    type: cli
+    has_tiltfile: false
+    required: false
+
+  # Add new controllers here:
+  # - name: vm-controller
+  #   repo: https://github.com/mNi-Cloud/vm-controller.git
+  #   type: controller
+  #   has_tiltfile: true
+  #   tilt_port: 10353
+  #   required: false
+  
+  # - name: storage-controller
+  #   repo: https://github.com/mNi-Cloud/storage-controller.git
+  #   type: controller
+  #   has_tiltfile: true
+  #   tilt_port: 10354
+  #   required: false
+
+# Build tools configuration
+build_tools:
+  go_version: "1.24.2"
+  controller_tools_version: "v0.17.0"
+  kustomize_version: "v5.5.0"
+  golangci_lint_version: "v1.62.2"
+  envtest_version: "release-0.20"
+  aqua_version: "2.38.0"
+  direnv_version: "2.35.0"
+  tilt_version: "v0.33.21"
+  kubectl_version: "v1.30.3"
+
+# Environment configuration
+environment:
+  goprivate: "github.com/mNi-Cloud"
+  tilt_allow_k8s_context: "kubernetes-admin@kubernetes"
+  tilt_registry: "localhost:5000"
+  registry_port: 5000
