@@ -23,7 +23,27 @@ components:
     has_tiltfile: true
     tilt_port: 10352
     required: true
-    
+
+  - name: vm-controller
+    repo: https://github.com/mNi-Cloud/vm-controller.git
+    has_tiltfile: true
+    tilt_port: 10353
+    required: true
+
+  - name: ctr-controller
+    repo: https://github.com/mNi-Cloud/ctr-controller.git
+    type: controller
+    has_tiltfile: true
+    tilt_port: 10354
+    required: true
+
+  - name: bs-controller
+    repo: https://github.com/mNi-Cloud/bs-controller.git
+    type: controller
+    has_tiltfile: true
+    tilt_port: 10355
+    required: true
+
   # CLI tool - no Tiltfile
   - name: cli
     repo: https://github.com/mNi-Cloud/cli.git
