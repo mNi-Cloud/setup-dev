@@ -58,6 +58,14 @@ components:
     tilt_port: 10357
     required: true
 
+  # AppConfig controller
+  - name: appconfig-controller
+    repo: git@github.com:mNi-Cloud/appconfig-controller.git
+    type: controller
+    has_tiltfile: true
+    tilt_port: 10357
+    required: false
+
   # CLI tool - no Tiltfile
   - name: cli
     repo: https://github.com/mNi-Cloud/cli.git
