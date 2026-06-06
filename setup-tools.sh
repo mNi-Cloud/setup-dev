@@ -1,13 +1,14 @@
 #!/bin/bash
 set -e
 
-echo "=== mni-backend Development Tools Installation ==="
+echo "=== mni Development Tools Installation ==="
 
 # Base directories - works from any location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MNI_ROOT="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="${MNI_ROOT}/mni-backend"
 INSTALL_DIR="$HOME/.local/bin"
+LOCAL_SHARE_DIR="$HOME/.local/share"
 
 # Create backend directory if it doesn't exist
 mkdir -p "$BACKEND_DIR"
@@ -75,6 +76,44 @@ install_go() {
         export PATH=$PATH:$GOPATH/bin
         print_status "Go installed successfully"
     fi
+}
+
+# Install Node.js for frontend development
+install_node() {
+    local node_version="22.12.0"
+    local config_file="${SCRIPT_DIR}/components.yaml"
+
+    if [ -f "$config_file" ] && command -v yq >/dev/null 2>&1; then
+        node_version=$(yq eval '.build_tools.node_version // "22.12.0"' "$config_file")
+    fi
+
+    if command -v node >/dev/null 2>&1; then
+        local node_major
+        node_major=$(node --version | sed -E 's/^v([0-9]+).*/\1/')
+        if [ "$node_major" -ge 22 ]; then
+            print_status "Node.js $(node --version) is already installed"
+            return
+        fi
+    fi
+
+    print_status "Installing Node.js ${node_version}..."
+
+    local node_archive="node-v${node_version}-linux-x64.tar.xz"
+    local node_dir="${LOCAL_SHARE_DIR}/node-v${node_version}-linux-x64"
+
+    mkdir -p "$LOCAL_SHARE_DIR"
+    wget -q --show-progress "https://nodejs.org/dist/v${node_version}/${node_archive}" -O "/tmp/${node_archive}"
+    tar -xJf "/tmp/${node_archive}" -C "$LOCAL_SHARE_DIR"
+    rm "/tmp/${node_archive}"
+
+    ln -sf "${node_dir}/bin/node" "$INSTALL_DIR/node"
+    ln -sf "${node_dir}/bin/npm" "$INSTALL_DIR/npm"
+    ln -sf "${node_dir}/bin/npx" "$INSTALL_DIR/npx"
+    if [ -x "${node_dir}/bin/corepack" ]; then
+        ln -sf "${node_dir}/bin/corepack" "$INSTALL_DIR/corepack"
+    fi
+
+    print_status "Node.js ${node_version} installed successfully"
 }
 
 # Install Docker
@@ -274,13 +313,14 @@ main() {
     # Install gh first (needed for private repos)
     install_gh
     install_build_essential  # Install make and build tools
+    install_yq
     install_go
+    install_node
     install_docker
     install_mnibuilder  # Requires gh for private repo access
     install_aqua
     install_direnv
     install_tmux
-    install_yq
     install_tilt
     
     echo ""
@@ -289,6 +329,8 @@ main() {
     echo "=== Installed Tools ===" 
     make --version 2>/dev/null | head -1 || print_error "make not found"
     go version 2>/dev/null || print_error "Go not found"
+    node --version 2>/dev/null || print_error "Node.js not found"
+    npm --version 2>/dev/null || print_error "npm not found"
     docker --version 2>/dev/null || print_error "Docker not found"
     mnibuilder version 2>/dev/null || print_error "mnibuilder not found"
     aqua version 2>/dev/null || print_error "aqua not found"

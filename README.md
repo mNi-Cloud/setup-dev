@@ -1,6 +1,6 @@
-# mni-backend Development Environment
+# mni Development Environment
 
-Complete development environment setup for mni-backend components.
+Complete development environment setup for mni backend controllers and frontend UI apps.
 
 ## Quick Start
 
@@ -10,18 +10,19 @@ Run the complete setup:
 ```
 
 This will:
-1. Install all required tools (including GitHub CLI)
+1. Install all required tools (including GitHub CLI and Node.js)
 2. Download mnibuilder from private repo (prompts for GitHub login if needed)
-3. Clone/update repositories  
+3. Clone/update backend and frontend repositories
 4. Configure environment
 5. Start Docker registry
-6. Prepare dependencies
-7. Optionally start Tilt
+6. Prepare Go and npm dependencies
+7. Optionally start the full development environment
 
 ## Required Tools
 
 All tools are installed as binaries (no package manager dependencies):
 - **Go 1.24.2** - Programming language
+- **Node.js 22.x / npm** - Frontend development runtime
 - **Docker** - Container runtime
 - **mnibuilder** - mNi Cloud project scaffolding tool
 - **aqua** - CLI version manager
@@ -35,9 +36,13 @@ All tools are installed as binaries (no package manager dependencies):
 
 Configured in `components.yaml`:
 - **dependency-controller** - Provides CRDs, must start first
+- **auth-controller** - Auth API and CRDs
 - **api-gateway** - API gateway service
 - **vpc-controller** - VPC management controller
+- **vm-controller**, **ctr-controller**, **bs-controller**, **vpn-controller** - Service controllers
 - **cli** - Command line interface (no Tiltfile)
+- **nginx frontend routing** - Routes frontend UI apps at http://localhost:8000 using `nginx.conf`
+- **API gateway port-forward** - Exposes the gateway at http://localhost:8080
 
 Add new components by editing `components.yaml`.
 
@@ -50,7 +55,7 @@ Installs all required development tools as binaries.
 ```
 
 ### clone-repos.sh
-Clones or updates all component repositories from GitHub using GitHub CLI.
+Clones or updates backend and frontend repositories from GitHub using GitHub CLI.
 ```bash
 ./clone-repos.sh
 ```
@@ -69,29 +74,33 @@ Starts Docker registry at localhost:5000.
 ```
 
 ### prepare-deps.sh
-Downloads Go dependencies and runs initial build for all components.
+Downloads Go dependencies, runs initial backend builds, and installs frontend npm dependencies.
 ```bash
 ./prepare-deps.sh
 ```
 
 ### tilt-up.sh
-Starts Tilt for all components in tmux session.
+Starts backend Tilt instances, frontend Vite apps, and nginx routing in a tmux session.
 ```bash
 ./tilt-up.sh
 ```
 - Creates tmux session "mni-tilt"
 - Starts dependency-controller first
-- Each component gets its own tmux window
-- Tilt UIs on sequential ports starting from 10350
+- Each backend component gets its own tmux window
+- Starts each frontend app in its own tmux window by default
+- Starts nginx from `nginx.conf` in a Docker container
+- Starts the API gateway port-forward in an `api-gateway-pf` tmux window
+- Backend Tilt UIs use the ports configured in `components.yaml`
+- Frontend UI is available at http://localhost:8000
 
 ### tilt-down.sh
-Stops all Tilt instances and cleans up.
+Stops all tmux-managed backend Tilt and frontend processes, stops nginx, then optionally cleans up Kubernetes resources.
 ```bash
 ./tilt-down.sh
 ```
 
 ### tilt-status.sh
-Shows status of Tilt instances and Kubernetes deployments.
+Shows status of tmux windows, Tilt instances, frontend apps, nginx, Docker registry, and Kubernetes deployments.
 ```bash
 ./tilt-status.sh
 ```
@@ -102,13 +111,22 @@ Automatically configured:
 - `GOPRIVATE=github.com/mNi-Cloud`
 - `TILT_ALLOW_K8S_CONTEXT=kubernetes-admin@kubernetes`
 - `TILT_REGISTRY=localhost:5000`
+- `VITE_API_BASE_URL=http://localhost:8080`
+- `VITE_API_NAMESPACE=default`
 
-## Tilt UI URLs
+## Development URLs
 
 After running `tilt-up.sh`:
 - dependency-controller: http://localhost:10350
-- api-gateway: http://localhost:10351  
-- vpc-controller: http://localhost:10352
+- auth-controller: http://localhost:10351
+- api-gateway: http://localhost:10352
+- vpc-controller: http://localhost:10353
+- vm-controller: http://localhost:10354
+- ctr-controller: http://localhost:10355
+- bs-controller: http://localhost:10356
+- vpn-controller: http://localhost:10357
+- API gateway: http://localhost:8080
+- frontend UI: http://localhost:8000
 
 ## Tmux Commands
 

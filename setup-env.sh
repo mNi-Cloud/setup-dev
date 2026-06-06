@@ -1,20 +1,14 @@
 #!/bin/bash
 set -e
 
-echo "=== mni-backend Environment Configuration ==="
+echo "=== mni Development Environment Configuration ==="
 
 # Base directories - works from any location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MNI_ROOT="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="${MNI_ROOT}/mni-backend"
+FRONTEND_DIR="${MNI_ROOT}/mni-frontend"
 CONFIG_FILE="${SCRIPT_DIR}/components.yaml"
-
-# Create backend directory if it doesn't exist
-if [ ! -d "$BACKEND_DIR" ]; then
-    print_warning "Backend directory not found: $BACKEND_DIR"
-    print_status "Run ./clone-repos.sh first to clone repositories"
-    exit 1
-fi
 
 # Colors
 RED='\033[0;31m'
@@ -64,7 +58,7 @@ create_envrc() {
     print_status "Creating .envrc for $component..."
     
     cat > "${component_dir}/.envrc" << 'EOF'
-# mni-backend environment variables
+# mni development environment variables
 export GOPRIVATE=github.com/mNi-Cloud
 export TILT_ALLOW_K8S_CONTEXT=kubernetes-admin@kubernetes
 export TILT_REGISTRY=localhost:5000
@@ -158,10 +152,12 @@ create_global_envrc() {
     print_status "Creating global .envrc in project root..."
     
     cat > "${MNI_ROOT}/.envrc" << 'EOF'
-# mni-backend global environment
+# mni development global environment
 export GOPRIVATE=github.com/mNi-Cloud
 export TILT_ALLOW_K8S_CONTEXT=kubernetes-admin@kubernetes
 export TILT_REGISTRY=localhost:5000
+export VITE_API_BASE_URL=http://localhost:8080
+export VITE_API_NAMESPACE=default
 
 # Add aqua bin to PATH
 export AQUA_ROOT_DIR=$HOME/.local/share/aquaproj-aqua
@@ -181,7 +177,13 @@ EOF
 
 # Main function
 main() {
-    print_status "Configuring environment for mni-backend components..."
+    print_status "Configuring environment for mni components..."
+
+    if [ ! -d "$BACKEND_DIR" ]; then
+        print_warning "Backend directory not found: $BACKEND_DIR"
+        print_status "Run ./clone-repos.sh first to clone repositories"
+        exit 1
+    fi
     
     check_prerequisites
     
@@ -212,8 +214,10 @@ main() {
     echo "GOPRIVATE: github.com/mNi-Cloud"
     echo "TILT_ALLOW_K8S_CONTEXT: kubernetes-admin@kubernetes"
     echo "TILT_REGISTRY: localhost:5000"
+    echo "VITE_API_BASE_URL: http://localhost:8080"
+    echo "VITE_API_NAMESPACE: default"
     echo ""
-    echo "Components configured:"
+    echo "Backend components configured:"
     for component in $components; do
         if [ -d "${BACKEND_DIR}/${component}" ]; then
             echo "  ✓ $component"
@@ -221,6 +225,16 @@ main() {
             echo "  ✗ $component (not cloned)"
         fi
     done
+
+    if [ "$(yq eval '.frontend.enabled // false' "$CONFIG_FILE")" = "true" ]; then
+        echo ""
+        echo "Frontend directory:"
+        if [ -d "$FRONTEND_DIR" ]; then
+            echo "  ✓ $FRONTEND_DIR"
+        else
+            echo "  ✗ $FRONTEND_DIR (not cloned)"
+        fi
+    fi
     
     echo ""
     print_warning "If direnv prompts appear, run 'direnv allow' in each directory"

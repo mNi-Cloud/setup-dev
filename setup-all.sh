@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "=== Complete mni-backend Development Setup ==="
+echo "=== Complete mni Development Setup ==="
 echo ""
 
 # Base directories - works from any location
@@ -60,12 +60,12 @@ main() {
     print_status "Starting complete development environment setup..."
     echo ""
     echo "This will:"
-    echo "  1. Install all required tools (Go, Docker, mnibuilder, aqua, direnv, tmux, yq, Tilt)"
-    echo "  2. Clone/update all repositories"
+    echo "  1. Install all required tools (Go, Node.js, Docker, mnibuilder, aqua, direnv, tmux, yq, Tilt)"
+    echo "  2. Clone/update backend and frontend repositories"
     echo "  3. Configure environment variables"
     echo "  4. Start Docker registry"
-    echo "  5. Prepare component dependencies"
-    echo "  6. Start Tilt for all components"
+    echo "  5. Prepare Go and npm dependencies"
+    echo "  6. Start backend Tilt instances, frontend apps, and nginx"
     echo ""
     
     read -p "Continue with full setup? (y/n): " -n 1 -r
@@ -108,7 +108,7 @@ main() {
     fi
     
     # Step 5: Prepare dependencies
-    if ! run_script "prepare-deps.sh" "Preparing Component Dependencies"; then
+    if ! run_script "prepare-deps.sh" "Preparing Dependencies"; then
         print_warning "Some components may not have built properly."
     fi
     
@@ -117,10 +117,10 @@ main() {
     echo ""
     echo "Environment is ready! You can now:"
     echo ""
-    echo "  Start Tilt for all components:"
+    echo "  Start the development environment:"
     echo "    ./tilt-up.sh"
     echo ""
-    echo "  Stop all Tilt instances:"
+    echo "  Stop the development environment:"
     echo "    ./tilt-down.sh"
     echo ""
     echo "  Check status:"
@@ -128,17 +128,22 @@ main() {
     echo ""
     echo "Important URLs:"
     echo "  Docker Registry: http://localhost:5000"
-    echo "  Tilt UIs will be available at:"
+    echo "  Backend Tilt UIs will be available at:"
     echo "    dependency-controller: http://localhost:10350"
-    echo "    api-gateway: http://localhost:10351"
-    echo "    vpc-controller: http://localhost:10352"
+    echo "    auth-controller: http://localhost:10351"
+    echo "    api-gateway: http://localhost:10352"
+    echo "    vpc-controller: http://localhost:10353"
+    echo "  API gateway:"
+    echo "    api-gateway: http://localhost:8080"
+    echo "  Frontend:"
+    echo "    UI: http://localhost:8000"
     echo ""
     
-    # Ask if user wants to start Tilt now
-    read -p "Start Tilt development environment now? (y/n): " -n 1 -r
+    # Ask if user wants to start the environment now
+    read -p "Start development environment now? (y/n): " -n 1 -r
     echo ""
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        run_script "tilt-up.sh" "Starting Tilt Environment"
+        run_script "tilt-up.sh" "Starting Development Environment"
     else
         print_status "Run './tilt-up.sh' when you're ready to start development"
     fi

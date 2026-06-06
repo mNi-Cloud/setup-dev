@@ -1,10 +1,11 @@
 #!/bin/bash
 set -e
 
-echo "=== Stopping Tilt for mni-backend Components ==="
+echo "=== Stopping mni Development Environment ==="
 
 # Tmux session name
 SESSION_NAME="mni-tilt"
+NGINX_CONTAINER="mni-nginx"
 
 # Colors
 RED='\033[0;31m'
@@ -16,12 +17,19 @@ print_status() { echo -e "${GREEN}[INFO]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 
-# Stop Tilt in tmux window
+stop_nginx() {
+    if docker ps -a --format '{{.Names}}' 2>/dev/null | grep -q "^${NGINX_CONTAINER}$"; then
+        print_status "Stopping nginx..."
+        docker rm -f "$NGINX_CONTAINER" >/dev/null 2>&1 || true
+    fi
+}
+
+# Stop process in tmux window
 stop_tilt_window() {
     local window=$1
     
     if tmux list-windows -t "$SESSION_NAME" 2>/dev/null | grep -q "$window"; then
-        print_status "Stopping Tilt in $window..."
+        print_status "Stopping process in $window..."
         tmux send-keys -t "$SESSION_NAME:$window" C-c
         sleep 1
         tmux send-keys -t "$SESSION_NAME:$window" "exit" C-m
@@ -44,6 +52,8 @@ cleanup_k8s() {
 
 # Main
 main() {
+    stop_nginx
+
     # Check if tmux session exists
     if ! tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
         print_warning "Tmux session '$SESSION_NAME' not found"
@@ -54,7 +64,7 @@ main() {
             pkill -f "tilt up" || true
         fi
     else
-        print_status "Stopping all Tilt instances in session '$SESSION_NAME'..."
+        print_status "Stopping all tmux-managed processes in session '$SESSION_NAME'..."
         
         # Get all windows
         windows=$(tmux list-windows -t "$SESSION_NAME" -F '#{window_name}' 2>/dev/null || echo "")
@@ -81,7 +91,7 @@ main() {
         cleanup_k8s
     fi
     
-    print_status "All Tilt instances stopped!"
+    print_status "Development environment stopped!"
 }
 
 main "$@"

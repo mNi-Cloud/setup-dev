@@ -1,4 +1,4 @@
-# mni-backend Components Configuration
+# mni Development Components Configuration
 # Add new components here as they are developed
 
 components:
@@ -74,23 +74,65 @@ components:
     required: false
 
   # Add new controllers here:
-  # - name: vm-controller
-  #   repo: https://github.com/mNi-Cloud/vm-controller.git
-  #   type: controller
-  #   has_tiltfile: true
-  #   tilt_port: 10353
-  #   required: false
-  
   # - name: storage-controller
   #   repo: https://github.com/mNi-Cloud/storage-controller.git
   #   type: controller
   #   has_tiltfile: true
-  #   tilt_port: 10354
+  #   tilt_port: 10358
   #   required: false
+
+frontend:
+  enabled: true
+  directory: mni-frontend
+  proxy:
+    port: 8000
+  apps:
+    - name: auth-ui
+      path: auth
+      dev_port: 3005
+      repo: https://github.com/mNi-Cloud/auth-ui.git
+      required: true
+
+    - name: vpc-ui
+      path: vpc
+      dev_port: 3000
+      repo: https://github.com/mNi-Cloud/vpc-ui.git
+      required: true
+
+    - name: vm-ui
+      path: vm
+      dev_port: 3001
+      repo: https://github.com/mNi-Cloud/vm-ui.git
+      required: true
+
+    - name: ctr-ui
+      path: ctr
+      dev_port: 3002
+      repo: https://github.com/mNi-Cloud/ctr-ui.git
+      required: true
+
+    - name: bs-ui
+      path: bs
+      dev_port: 3003
+      repo: https://github.com/mNi-Cloud/bs-ui.git
+      required: true
+
+    - name: vpn-ui
+      path: vpn
+      dev_port: 3004
+      repo: https://github.com/mNi-Cloud/vpn-ui.git
+      required: true
+
+api_gateway:
+  namespace: api-gateway-system
+  service: api-gateway-gateway-server-service
+  local_port: 8080
+  service_port: 80
 
 # Build tools configuration
 build_tools:
   go_version: "1.24.2"
+  node_version: "22.12.0"
   mnibuilder_version: "v0.0.4"
   controller_tools_version: "v0.17.0"
   kustomize_version: "v5.5.0"

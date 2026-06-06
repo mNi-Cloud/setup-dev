@@ -1,20 +1,14 @@
 #!/bin/bash
 set -e
 
-echo "=== Preparing Component Dependencies ==="
+echo "=== Preparing mni Dependencies ==="
 
 # Base directories - works from any location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MNI_ROOT="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="${MNI_ROOT}/mni-backend"
+FRONTEND_DIR="${MNI_ROOT}/mni-frontend"
 CONFIG_FILE="${SCRIPT_DIR}/components.yaml"
-
-# Check if backend directory exists
-if [ ! -d "$BACKEND_DIR" ]; then
-    print_error "Backend directory not found: $BACKEND_DIR"
-    print_warning "Run ./clone-repos.sh first to clone repositories"
-    exit 1
-fi
 
 # Colors
 RED='\033[0;31m'
@@ -31,20 +25,25 @@ print_header() { echo -e "${BLUE}=== $1 ===${NC}"; }
 # Check prerequisites
 check_prerequisites() {
     local missing=()
+
+    if [ ! -f "$CONFIG_FILE" ]; then
+        print_error "Configuration file not found: $CONFIG_FILE"
+        exit 1
+    fi
     
     command -v go >/dev/null 2>&1 || missing+=("go")
     command -v yq >/dev/null 2>&1 || missing+=("yq")
     command -v mnibuilder >/dev/null 2>&1 || missing+=("mnibuilder")
     command -v make >/dev/null 2>&1 || missing+=("make")
+
+    if command -v yq >/dev/null 2>&1 && [ "$(frontend_enabled)" = "true" ]; then
+        command -v node >/dev/null 2>&1 || missing+=("node")
+        command -v npm >/dev/null 2>&1 || missing+=("npm")
+    fi
     
     if [ ${#missing[@]} -gt 0 ]; then
         print_error "Missing required tools: ${missing[*]}"
         print_warning "Please run './setup-tools.sh' first"
-        exit 1
-    fi
-    
-    if [ ! -f "$CONFIG_FILE" ]; then
-        print_error "Configuration file not found: $CONFIG_FILE"
         exit 1
     fi
 }
@@ -55,10 +54,45 @@ get_component_type() {
     yq eval ".components[] | select(.name == \"$component\") | .type" "$CONFIG_FILE"
 }
 
+frontend_enabled() {
+    yq eval '.frontend.enabled // false' "$CONFIG_FILE"
+}
+
+get_frontend_paths() {
+    yq eval '.frontend.apps[].path' "$CONFIG_FILE"
+}
+
 has_makefile() {
     local component=$1
     local component_dir="${BACKEND_DIR}/${component}"
     [ -f "${component_dir}/Makefile" ]
+}
+
+install_npm_deps() {
+    local name=$1
+    local app_dir=$2
+
+    if [ ! -d "$app_dir" ]; then
+        print_warning "$name: Directory not found, skipping npm dependencies"
+        return
+    fi
+
+    if [ ! -f "${app_dir}/package.json" ]; then
+        print_warning "$name: No package.json found, skipping npm dependencies"
+        return
+    fi
+
+    print_status "$name: Installing npm dependencies..."
+    cd "$app_dir"
+
+    if [ -f package-lock.json ]; then
+        npm ci
+    else
+        npm install
+    fi
+
+    cd - > /dev/null
+    print_status "$name: npm dependencies installed"
 }
 
 # Setup Go environment
@@ -199,9 +233,35 @@ process_component() {
     echo ""
 }
 
+prepare_frontend_deps() {
+    if [ "$(frontend_enabled)" != "true" ]; then
+        return
+    fi
+
+    print_header "Processing frontend dependencies"
+
+    if [ ! -d "$FRONTEND_DIR" ]; then
+        print_warning "Frontend directory not found: $FRONTEND_DIR"
+        print_warning "Run ./clone-repos.sh first to clone frontend repositories"
+        return
+    fi
+
+    for path in $(get_frontend_paths); do
+        install_npm_deps "$path" "${FRONTEND_DIR}/${path}"
+    done
+
+    echo ""
+}
+
 # Main function
 main() {
-    print_status "Preparing dependencies for all components..."
+    print_status "Preparing dependencies for configured repositories..."
+
+    if [ ! -d "$BACKEND_DIR" ]; then
+        print_error "Backend directory not found: $BACKEND_DIR"
+        print_warning "Run ./clone-repos.sh first to clone repositories"
+        exit 1
+    fi
     
     check_prerequisites
     setup_go_env
@@ -224,9 +284,11 @@ main() {
     for component in $components; do
         process_component "$component"
     done
+
+    prepare_frontend_deps
     
     print_header "Summary"
-    echo "Components processed:"
+    echo "Backend components processed:"
     for component in $(yq eval '.components[].name' "$CONFIG_FILE"); do
         component_dir="${BACKEND_DIR}/${component}"
         if [ -d "$component_dir" ]; then
@@ -239,6 +301,18 @@ main() {
             echo -e "  ${RED}✗${NC} $component - Not cloned"
         fi
     done
+
+    if [ "$(frontend_enabled)" = "true" ]; then
+        echo ""
+        echo "Frontend apps processed:"
+        for path in $(get_frontend_paths); do
+            if [ -d "${FRONTEND_DIR}/${path}/node_modules" ]; then
+                echo -e "  ${GREEN}✓${NC} $path - npm dependencies installed"
+            else
+                echo -e "  ${YELLOW}⚠${NC} $path - npm dependencies missing"
+            fi
+        done
+    fi
     
     echo ""
     print_status "Dependencies preparation complete!"

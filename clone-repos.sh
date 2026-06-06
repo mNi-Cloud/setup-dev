@@ -1,16 +1,18 @@
 #!/bin/bash
 set -e
 
-echo "=== Clone/Update mni-backend Components ==="
+echo "=== Clone/Update mni Repositories ==="
 
 # Base directories - works from any location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MNI_ROOT="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="${MNI_ROOT}/mni-backend"
+FRONTEND_DIR="${MNI_ROOT}/mni-frontend"
 CONFIG_FILE="${SCRIPT_DIR}/components.yaml"
 
-# Create backend directory if it doesn't exist
+# Create repository directories if they don't exist
 mkdir -p "$BACKEND_DIR"
+mkdir -p "$FRONTEND_DIR"
 
 # Colors for output
 RED='\033[0;31m'
@@ -43,8 +45,8 @@ check_prerequisites() {
         exit 1
     fi
     
-    if ! command_exists yq && ! command_exists python3; then
-        print_warning "yq or python3 not found. Installing yq..."
+    if ! command_exists yq; then
+        print_warning "yq not found. Installing yq..."
         wget -q -O /tmp/yq "https://github.com/mikefarah/yq/releases/download/v4.35.2/yq_linux_amd64"
         chmod +x /tmp/yq
         sudo mv /tmp/yq /usr/local/bin/yq
@@ -116,25 +118,54 @@ with open('$CONFIG_FILE', 'r') as f:
     fi
 }
 
+get_frontend_enabled() {
+    if command_exists yq; then
+        yq eval '.frontend.enabled // false' "$CONFIG_FILE"
+    else
+        echo "false"
+    fi
+}
+
+get_frontend_app_count() {
+    if command_exists yq; then
+        yq eval '.frontend.apps | length' "$CONFIG_FILE"
+    else
+        echo "0"
+    fi
+}
+
+get_frontend_app_info() {
+    local index=$1
+    local field=$2
+
+    if command_exists yq; then
+        yq eval ".frontend.apps[$index].$field" "$CONFIG_FILE"
+    else
+        echo ""
+    fi
+}
+
 # Clone or update repository
 clone_or_update_repo() {
     local name=$1
     local repo=$2
-    local component_dir="${BACKEND_DIR}/${name}"
+    local base_dir=$3
+    local repo_path=${4:-$name}
+    local component_dir="${base_dir}/${repo_path}"
     
     print_status "Processing $name..."
     
-    # Create backend directory if it doesn't exist
-    mkdir -p "$BACKEND_DIR"
+    mkdir -p "$base_dir"
     
     if [ -d "$component_dir/.git" ]; then
         print_status "$name already cloned, pulling latest changes..."
         cd "$component_dir"
         
-        # Stash any local changes
+        # Avoid moving local user work out of the working tree.
         if ! git diff --quiet || ! git diff --cached --quiet; then
-            print_warning "Local changes detected in $name, stashing..."
-            git stash push -m "Auto-stash before pull $(date +%Y%m%d-%H%M%S)"
+            print_warning "Local changes detected in $name, skipping pull"
+            cd - > /dev/null
+            return
         fi
         
         # Pull latest changes
@@ -215,16 +246,14 @@ main() {
         name=$(get_component_info $i "name")
         repo=$(get_component_info $i "repo")
         
-        if [ -n "$name" ] && [ -n "$repo" ]; then
-            clone_or_update_repo "$name" "$repo"
+        if [ -n "$name" ] && [ -n "$repo" ] && [ "$repo" != "null" ]; then
+            clone_or_update_repo "$name" "$repo" "$BACKEND_DIR" "$name"
         fi
     done
     
-    print_status "All repositories processed successfully!"
-    
     # Show summary
     echo ""
-    echo -e "${BLUE}=== Repository Summary ===${NC}"
+    echo -e "${BLUE}=== Backend Repository Summary ===${NC}"
     for ((i=0; i<$component_count; i++)); do
         name=$(get_component_info $i "name")
         type=$(get_component_info $i "type")
@@ -236,6 +265,37 @@ main() {
             echo -e "  ${RED}✗${NC} $name ($type) - Not found"
         fi
     done
+
+    if [ "$(get_frontend_enabled)" = "true" ]; then
+        frontend_count=$(get_frontend_app_count)
+        print_status "Found $frontend_count frontend apps in configuration"
+
+        for ((i=0; i<$frontend_count; i++)); do
+            name=$(get_frontend_app_info $i "name")
+            path=$(get_frontend_app_info $i "path")
+            repo=$(get_frontend_app_info $i "repo")
+
+            if [ -n "$name" ] && [ -n "$repo" ] && [ "$repo" != "null" ]; then
+                clone_or_update_repo "$name" "$repo" "$FRONTEND_DIR" "$path"
+            fi
+        done
+
+        echo ""
+        echo -e "${BLUE}=== Frontend Repository Summary ===${NC}"
+        for ((i=0; i<$frontend_count; i++)); do
+            name=$(get_frontend_app_info $i "name")
+            path=$(get_frontend_app_info $i "path")
+
+            if [ -d "${FRONTEND_DIR}/${path}" ]; then
+                echo -e "  ${GREEN}✓${NC} $name (${path})"
+            else
+                echo -e "  ${RED}✗${NC} $name (${path}) - Not found"
+            fi
+        done
+
+    fi
+
+    print_status "Repository processing complete"
 }
 
 main "$@"
