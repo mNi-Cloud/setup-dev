@@ -9,46 +9,53 @@ components:
     has_tiltfile: true
     tilt_port: 10350
     required: true
+
+  - name: auth-controller
+    repo: https://github.com/mNi-Cloud/auth-controller.git
+    type: controller
+    has_tiltfile: true
+    tilt_port: 10351
+    required: true
     
   - name: api-gateway
     repo: https://github.com/mNi-Cloud/api-gateway.git
     type: service
     has_tiltfile: true
-    tilt_port: 10351
+    tilt_port: 10352
     required: true
     
   - name: vpc-controller
     repo: https://github.com/mNi-Cloud/vpc-controller.git
     type: controller
     has_tiltfile: true
-    tilt_port: 10352
+    tilt_port: 10353
     required: true
 
   - name: vm-controller
     repo: https://github.com/mNi-Cloud/vm-controller.git
     has_tiltfile: true
-    tilt_port: 10353
+    tilt_port: 10354
     required: true
 
   - name: ctr-controller
     repo: https://github.com/mNi-Cloud/ctr-controller.git
     type: controller
     has_tiltfile: true
-    tilt_port: 10354
+    tilt_port: 10355
     required: true
 
   - name: bs-controller
     repo: https://github.com/mNi-Cloud/bs-controller.git
     type: controller
     has_tiltfile: true
-    tilt_port: 10355
+    tilt_port: 10356
     required: true
 
   - name: vpn-controller
     repo: https://github.com/mNi-Cloud/vpn-controller.git
     type: controller
     has_tiltfile: true
-    tilt_port: 10356
+    tilt_port: 10357
     required: true
 
   # CLI tool - no Tiltfile
