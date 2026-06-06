@@ -44,6 +44,13 @@ components:
     tilt_port: 10355
     required: true
 
+  - name: vpn-controller
+    repo: https://github.com/mNi-Cloud/vpn-controller.git
+    type: controller
+    has_tiltfile: true
+    tilt_port: 10356
+    required: true
+
   # CLI tool - no Tiltfile
   - name: cli
     repo: https://github.com/mNi-Cloud/cli.git
