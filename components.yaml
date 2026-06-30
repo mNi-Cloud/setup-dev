@@ -63,7 +63,15 @@ components:
     repo: git@github.com:mNi-Cloud/appconfig-controller.git
     type: controller
     has_tiltfile: true
-    tilt_port: 10357
+    tilt_port: 10358
+    required: false
+
+  # AppSecret controller
+  - name: appsecret-controller
+    repo: git@github.com:mNi-Cloud/appsecret-controller.git
+    type: controller
+    has_tiltfile: true
+    tilt_port: 10359
     required: false
 
   # CLI tool - no Tiltfile
